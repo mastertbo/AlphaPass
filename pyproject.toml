@@ -1,5 +1,5 @@
 [project]
-name = "vrautomatte"
+name = "AlphaPass"
 version = "0.1.0"
 description = "Automated video matting and alpha channel generation for VR passthrough content"
 readme = "README.md"
@@ -15,9 +15,9 @@ dependencies = [
 ]
 
 [project.scripts]
-vrautomatte = "vrautomatte.main:main"
-vrautomatte-queue = "vrautomatte.cli.queue_runner:main"
-vrautomatte-encode = "vrautomatte.cli.encode_runner:main"
+AlphaPass = "AlphaPass.main:main"
+AlphaPass-queue = "AlphaPass.cli.queue_runner:main"
+AlphaPass-encode = "AlphaPass.cli.encode_runner:main"
 
 [project.optional-dependencies]
 matanyone2 = [
@@ -52,7 +52,7 @@ override-dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/vrautomatte"]
+packages = ["src/AlphaPass"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/vrautomatte"]
+include = ["src/AlphaPass"]

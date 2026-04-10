@@ -25,7 +25,7 @@ _CUDA_WHEELS = [
 
 # Env var set after bootstrap installs torch, so the restarted process
 # skips the nvidia-smi call and trusts the installed version.
-_BOOTSTRAP_ENV = "VRAUTOMATTE_TORCH_OK"
+_BOOTSTRAP_ENV = "AlphaPass_TORCH_OK"
 
 
 def _nvidia_cuda_version() -> tuple[int, int] | None:
@@ -84,7 +84,7 @@ def _restart() -> None:
     env[_BOOTSTRAP_ENV] = "1"
 
     # Use the module entry point — works regardless of how the app was invoked
-    args = [sys.executable, "-m", "vrautomatte.main"] + sys.argv[1:]
+    args = [sys.executable, "-m", "AlphaPass.main"] + sys.argv[1:]
     sys.exit(subprocess.call(args, env=env))
 
 

@@ -4,13 +4,13 @@ import unittest
 
 import numpy as np
 
-from vrautomatte.pipeline.sam2_masks import (
+from AlphaPass.pipeline.sam2_masks import (
     _mask_center_of_mass,
     _select_non_pov_mask,
     _select_person_mask,
     _select_pov_body_mask,
 )
-from vrautomatte.pipeline.matte import POVExclusionProcessor
+from AlphaPass.pipeline.matte import POVExclusionProcessor
 
 
 class TestMaskCenterOfMass(unittest.TestCase):

@@ -18,7 +18,7 @@ import numpy as np
 import torch
 from loguru import logger
 
-from vrautomatte.utils.gpu import get_device
+from AlphaPass.utils.gpu import get_device
 
 # Valid model variant names
 VARIANTS = ["mobilenetv3", "resnet50", "matanyone2"]
@@ -112,7 +112,7 @@ class POVExclusionProcessor:
         pov_body_mask: np.ndarray,
         device: torch.device | None = None,
     ):
-        from vrautomatte.pipeline.scene_detect import (
+        from AlphaPass.pipeline.scene_detect import (
             SceneChangeDetector,
         )
 
@@ -135,7 +135,7 @@ class POVExclusionProcessor:
 
     def _refresh_mask(self, frame: np.ndarray) -> None:
         """Regenerate POV body mask from current frame."""
-        from vrautomatte.pipeline.sam2_masks import (
+        from AlphaPass.pipeline.sam2_masks import (
             generate_pov_body_mask,
         )
         logger.info("Scene change — refreshing POV mask")
@@ -214,7 +214,7 @@ def create_processor(
         A MatteProcessor instance.
     """
     if variant in ("mobilenetv3", "resnet50"):
-        from vrautomatte.pipeline.rvm import RVMProcessor
+        from AlphaPass.pipeline.rvm import RVMProcessor
         processor = RVMProcessor(
             variant=variant,
             downsample_ratio=downsample_ratio,
@@ -223,7 +223,7 @@ def create_processor(
         )
 
         if pov_mode and first_frame is not None:
-            from vrautomatte.pipeline.sam2_masks import (
+            from AlphaPass.pipeline.sam2_masks import (
                 generate_pov_body_mask,
             )
             if device is None:
@@ -246,10 +246,10 @@ def create_processor(
         return processor
 
     if variant == "matanyone2":
-        from vrautomatte.pipeline.matanyone2 import (
+        from AlphaPass.pipeline.matanyone2 import (
             MatAnyone2Processor,
         )
-        from vrautomatte.pipeline.sam2_masks import (
+        from AlphaPass.pipeline.sam2_masks import (
             generate_first_frame_mask,
         )
 

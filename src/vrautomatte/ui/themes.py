@@ -1,4 +1,4 @@
-"""Light and dark themes for VRAutoMatte UI.
+"""Light and dark themes for AlphaPass UI.
 
 Each theme provides a Qt stylesheet and a color map for
 inline styles that can't be set via global stylesheet

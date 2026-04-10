@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv --version)",
+      "Bash(ffmpeg -version)",
+      "Bash(winget install:*)",
+      "mcp__Windows-MCP__PowerShell",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/ack00gar/FunGen-AI-Powered-Funscript-Generator/main/install.bat\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/ack00gar/FunGen-AI-Powered-Funscript-Generator/refs/heads/main/install.bat\")",
+      "Bash(ls /c/Users/Admin/projects/FunGen-AI-Powered-Funscript-Generator/*.bat /c/Users/Admin/projects/FunGen-AI-Powered-Funscript-Generator/*.sh)",
+      "Bash(uv sync:*)"
+    ]
+  }
+}

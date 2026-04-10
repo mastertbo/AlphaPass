@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import torch
 
-from vrautomatte.pipeline.matte import (
+from AlphaPass.pipeline.matte import (
     MatteProcessor,
     create_processor,
 )
@@ -30,7 +30,7 @@ def _matanyone2_available() -> bool:
 class TestRVMRegressionFactory(unittest.TestCase):
     """Verify RVM still works through the new factory."""
 
-    @patch("vrautomatte.pipeline.rvm.download_model")
+    @patch("AlphaPass.pipeline.rvm.download_model")
     @patch("torch.jit.load")
     def test_mobilenetv3_via_factory(self, mock_load, mock_dl):
         """Factory-created mobilenetv3 is a valid processor."""
@@ -45,7 +45,7 @@ class TestRVMRegressionFactory(unittest.TestCase):
         self.assertTrue(hasattr(proc, "reset"))
         self.assertTrue(hasattr(proc, "cleanup"))
 
-    @patch("vrautomatte.pipeline.rvm.download_model")
+    @patch("AlphaPass.pipeline.rvm.download_model")
     @patch("torch.jit.load")
     def test_resnet50_via_factory(self, mock_load, mock_dl):
         """Factory-created resnet50 is a valid processor."""
@@ -72,7 +72,7 @@ class TestMatAnyone2Factory(unittest.TestCase):
     )
     def test_matanyone2_protocol_conformance(self):
         """MatAnyone2Processor matches protocol."""
-        from vrautomatte.pipeline.matanyone2 import (
+        from AlphaPass.pipeline.matanyone2 import (
             MatAnyone2Processor,
         )
         self.assertTrue(
@@ -85,7 +85,7 @@ class TestRunnerImport(unittest.TestCase):
 
     def test_runner_imports(self):
         """Runner module imports without error."""
-        from vrautomatte.pipeline.runner import (
+        from AlphaPass.pipeline.runner import (
             Pipeline,
             PipelineConfig,
         )
@@ -94,7 +94,7 @@ class TestRunnerImport(unittest.TestCase):
 
     def test_runner_config_variants(self):
         """PipelineConfig accepts all known variants."""
-        from vrautomatte.pipeline.runner import PipelineConfig
+        from AlphaPass.pipeline.runner import PipelineConfig
         for v in ("mobilenetv3", "resnet50", "matanyone2"):
             cfg = PipelineConfig(model_variant=v)
             self.assertEqual(cfg.model_variant, v)
@@ -105,7 +105,7 @@ class TestCPUFallback(unittest.TestCase):
 
     def test_get_device_returns_valid(self):
         """get_device returns a valid torch.device."""
-        from vrautomatte.utils.gpu import get_device
+        from AlphaPass.utils.gpu import get_device
         device = get_device()
         self.assertIsInstance(device, torch.device)
         self.assertIn(
@@ -114,7 +114,7 @@ class TestCPUFallback(unittest.TestCase):
 
     def test_get_device_info_has_name(self):
         """get_device_info returns a dict with name."""
-        from vrautomatte.utils.gpu import get_device_info
+        from AlphaPass.utils.gpu import get_device_info
         info = get_device_info()
         self.assertIn("device", info)
         self.assertIn("name", info)
@@ -125,7 +125,7 @@ class TestSettingsPersistence(unittest.TestCase):
 
     def test_defaults_include_model_variant(self):
         """Default settings include model_variant."""
-        from vrautomatte.utils.settings import _DEFAULTS
+        from AlphaPass.utils.settings import _DEFAULTS
         self.assertIn("model_variant", _DEFAULTS)
         self.assertEqual(_DEFAULTS["model_variant"], 0)
 

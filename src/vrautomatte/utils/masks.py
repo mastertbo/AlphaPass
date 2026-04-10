@@ -17,7 +17,7 @@ _FALLBACK_URLS = [
 
 def _mask_dir() -> Path:
     """Return the directory where masks are cached."""
-    d = Path.home() / ".cache" / "vrautomatte" / "masks"
+    d = Path.home() / ".cache" / "AlphaPass" / "masks"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

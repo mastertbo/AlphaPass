@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "AlphaPass GUI",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "AlphaPass"],
+      "port": null
+    }
+  ]
+}

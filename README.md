@@ -1,4 +1,4 @@
-# VRAutoMatte
+# AlphaPass
 
 Automated AI video matting for VR passthrough content. Separate people from backgrounds in VR videos and generate alpha channel mattes for DeoVR passthrough playback on Meta Quest headsets.
 
@@ -48,16 +48,16 @@ sudo apt install ffmpeg
 ### Install & Run
 
 ```bash
-git clone https://github.com/SifuInTheShell/VRAutoMatte.git
-cd VRAutoMatte
+git clone https://github.com/SifuInTheShell/AlphaPass.git
+cd AlphaPass
 
 # Install with uv (recommended)
 uv sync
-uv run vrautomatte
+uv run AlphaPass
 
 # Or with pip
 pip install -e .
-vrautomatte
+AlphaPass
 ```
 
 ### Optional: MatAnyone 2 (experimental, non-VR only)
@@ -76,7 +76,7 @@ This pulls in [MatAnyone 2](https://github.com/pq-yang/MatAnyone2) and [SAM2](ht
 
 ### Basic Workflow
 
-1. **Launch** the app: `uv run vrautomatte`
+1. **Launch** the app: `uv run AlphaPass`
 2. **Load a video** — click Browse or drag a file onto the window
 3. **Choose a model**:
    - `mobilenetv3` — fastest, detects all people (crowds, groups)
@@ -213,12 +213,12 @@ Input Video (fisheye SBS)
 
 ### Settings
 
-All settings are saved automatically to `~/.config/vrautomatte/settings.json` (Linux/macOS) or `%APPDATA%/vrautomatte/settings.json` (Windows) and restored on next launch.
+All settings are saved automatically to `~/.config/AlphaPass/settings.json` (Linux/macOS) or `%APPDATA%/AlphaPass/settings.json` (Windows) and restored on next launch.
 
 ## Architecture
 
 ```
-src/vrautomatte/
+src/AlphaPass/
 ├── main.py                    # Entry point
 ├── pipeline/
 │   ├── matte.py               # MatteProcessor protocol, factory, AlphaSmoother
@@ -282,7 +282,7 @@ uv run python -m unittest discover -s tests -p "test_*.py"
 uv run python -m unittest tests/test_sbs.py
 
 # Check syntax
-uv run python -c "import ast; ast.parse(open('src/vrautomatte/ui/main_window.py').read()); print('OK')"
+uv run python -c "import ast; ast.parse(open('src/AlphaPass/ui/main_window.py').read()); print('OK')"
 ```
 
 ### Test Coverage
@@ -332,11 +332,11 @@ Models are downloaded automatically on first use and cached locally:
 
 | Model | Size | Cache Location |
 |-------|------|----------------|
-| RVM MobileNetV3 | ~15 MB | `~/.cache/vrautomatte/models/` |
-| RVM ResNet50 | ~55 MB | `~/.cache/vrautomatte/models/` |
+| RVM MobileNetV3 | ~15 MB | `~/.cache/AlphaPass/models/` |
+| RVM ResNet50 | ~55 MB | `~/.cache/AlphaPass/models/` |
 | MatAnyone 2 | ~2 GB | Managed by HuggingFace Hub |
 | SAM2 | ~400 MB | Managed by HuggingFace Hub |
-| DeoVR mask8k.png | ~2 MB | `~/.cache/vrautomatte/masks/` |
+| DeoVR mask8k.png | ~2 MB | `~/.cache/AlphaPass/masks/` |
 
 ## License
 

@@ -1,18 +1,18 @@
-"""Headless queue runner for VRAutoMatte.
+"""Headless queue runner for AlphaPass.
 
 Commands
 --------
-vrautomatte-queue build --dir D:\\Videos
+AlphaPass-queue build --dir D:\\Videos
     Scans a directory recursively for .mp4 files and writes a queue.json.
     Skips files that already have a matching _xalpha output.
     Edit queue.json to reorder or remove entries before running.
 
-vrautomatte-queue run [--queue PATH] [--now]
+AlphaPass-queue run [--queue PATH] [--now]
     Processes queue.json one file at a time.
     Only runs between 02:00–07:00 unless --now is passed.
     Saves progress after each file so it can resume across nights.
 
-vrautomatte-queue status [--queue PATH]
+AlphaPass-queue status [--queue PATH]
     Shows pending / done counts and lists remaining files.
 """
 
@@ -28,7 +28,7 @@ from pathlib import Path
 # Defaults
 # ---------------------------------------------------------------------------
 
-DEFAULT_QUEUE = Path.home() / ".config" / "vrautomatte" / "queue.json"
+DEFAULT_QUEUE = Path.home() / ".config" / "AlphaPass" / "queue.json"
 RUN_START_HOUR = 2   # 02:00
 RUN_END_HOUR = 12    # 12:00 (exclusive)
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm"}
@@ -142,12 +142,12 @@ def _in_window() -> bool:
 
 
 def _build_pipeline_config(item: dict, settings: dict):
-    from vrautomatte.pipeline.runner import (
+    from AlphaPass.pipeline.runner import (
         OutputFormat,
         PipelineConfig,
         ProjectionType,
     )
-    from vrautomatte.utils.settings import load_settings
+    from AlphaPass.utils.settings import load_settings
 
     if settings is None:
         settings = load_settings()
@@ -178,7 +178,7 @@ def cmd_run(args: argparse.Namespace) -> None:
 
     if not queue_path.exists():
         print(f"No queue file found at: {queue_path}", file=sys.stderr)
-        print("Run:  vrautomatte-queue build --dir <folder>  first.", file=sys.stderr)
+        print("Run:  AlphaPass-queue build --dir <folder>  first.", file=sys.stderr)
         sys.exit(1)
 
     if not args.now and not _in_window():
@@ -189,8 +189,8 @@ def cmd_run(args: argparse.Namespace) -> None:
         )
         sys.exit(0)
 
-    from vrautomatte.pipeline.runner import Pipeline, PipelineProgress
-    from vrautomatte.utils.settings import load_settings
+    from AlphaPass.pipeline.runner import Pipeline, PipelineProgress
+    from AlphaPass.utils.settings import load_settings
 
     settings = load_settings()
     queue = _load_queue(queue_path)
@@ -314,8 +314,8 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="vrautomatte-queue",
-        description="Headless batch queue manager for VRAutoMatte.",
+        prog="AlphaPass-queue",
+        description="Headless batch queue manager for AlphaPass.",
     )
     parser.add_argument(
         "--queue",

@@ -28,7 +28,7 @@ import numpy as np
 import torch
 from loguru import logger
 
-from vrautomatte.utils.gpu import configure_cuda_performance, get_device
+from AlphaPass.utils.gpu import configure_cuda_performance, get_device
 
 # Official RVM release URLs — both FP32 and FP16 TorchScript variants.
 _BASE = (
@@ -49,7 +49,7 @@ RVM_MODELS: dict[str, dict[str, str]] = {
 
 def _model_dir() -> Path:
     """Return the directory where models are cached."""
-    d = Path.home() / ".cache" / "vrautomatte" / "models"
+    d = Path.home() / ".cache" / "AlphaPass" / "models"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

@@ -1,18 +1,18 @@
 # Claude Code Project Notes
 
 ## Project Overview
-VRAutoMatte — Qt-based desktop app for automated video matting and alpha channel generation for VR passthrough content.
+AlphaPass — Qt-based desktop app for automated video matting and alpha channel generation for VR passthrough content.
 
 ## Repository
-- **Path:** `D:\CODE\VRAutoMatte\VRAutoMatte` (nested directory under `D:\CODE\VRAutoMatte`)
-- **GitHub:** https://github.com/SifuInTheShell/VRAutoMatte
+- **Path:** `D:\CODE\AlphaPass\AlphaPass` (nested directory under `D:\CODE\AlphaPass`)
+- **GitHub:** https://github.com/SifuInTheShell/AlphaPass
 - **Branch:** master
 
 ## Architecture
-- **Entry point:** `src/vrautomatte/main.py` → MainWindow (PySide6/Qt)
+- **Entry point:** `src/AlphaPass/main.py` → MainWindow (PySide6/Qt)
 - **Pipeline:** `pipeline/runner.py` — orchestrates ffmpeg extraction → AI matting → video assembly
 - **GPU bootstrap:** `utils/bootstrap.py` — detects NVIDIA GPU via nvidia-smi, installs correct CUDA PyTorch wheel at startup before any torch imports
-- **Settings:** `utils/settings.py` → `~/.config/vrautomatte/settings.json`
+- **Settings:** `utils/settings.py` → `~/.config/AlphaPass/settings.json`
 - **Worker threading:** `ui/worker.py` — PipelineWorker (QThread) runs pipeline, InstallWorker handles in-app dependency install
 - **GPU detection:** `utils/gpu.py` — get_device() and get_device_info() for CUDA/MPS/CPU
 
@@ -62,7 +62,7 @@ VRAutoMatte — Qt-based desktop app for automated video matting and alpha chann
 ### PyTorch CUDA on Windows
 - RTX 50xx (Blackwell) needs cu128 minimum — cu126 detects GPU but can't run on sm_120
 - `uv sync` overwrites manually installed torch — must configure index in `pyproject.toml`
-- Bootstrap module runs before torch imports, uses env var `VRAUTOMATTE_TORCH_OK` to skip check on restart
+- Bootstrap module runs before torch imports, uses env var `AlphaPass_TORCH_OK` to skip check on restart
 
 ## Open Issues
 
@@ -82,7 +82,7 @@ VRAutoMatte — Qt-based desktop app for automated video matting and alpha chann
 
 ### Resumable Pipeline (Checkpoint)
 - JSON checkpoint saved after each segment flush
-- Deterministic temp dir: `vrautomatte_{stem}_{config_hash[:8]}/`
+- Deterministic temp dir: `AlphaPass_{stem}_{config_hash[:8]}/`
 - Validates input_hash (first 64KB) + config_hash — stale checkpoint = fresh start
 - Stale temp dirs (>7 days) cleaned on pipeline start
 - UI checkbox "Auto-resume on restart"

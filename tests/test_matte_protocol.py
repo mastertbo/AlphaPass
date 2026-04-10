@@ -5,12 +5,12 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
-from vrautomatte.pipeline.matte import (
+from AlphaPass.pipeline.matte import (
     VARIANTS,
     MatteProcessor,
     create_processor,
 )
-from vrautomatte.pipeline.rvm import RVMProcessor
+from AlphaPass.pipeline.rvm import RVMProcessor
 
 
 def _matanyone2_available() -> bool:
@@ -53,7 +53,7 @@ class TestVariants(unittest.TestCase):
 class TestCreateProcessorRVM(unittest.TestCase):
     """Test factory for RVM variants (with mocked model)."""
 
-    @patch("vrautomatte.pipeline.rvm.download_model")
+    @patch("AlphaPass.pipeline.rvm.download_model")
     @patch("torch.jit.load")
     def test_mobilenetv3(self, mock_load, mock_dl):
         """Factory returns RVMProcessor for mobilenetv3."""
@@ -68,7 +68,7 @@ class TestCreateProcessorRVM(unittest.TestCase):
         self.assertIsInstance(proc, RVMProcessor)
         self.assertEqual(proc.variant, "mobilenetv3")
 
-    @patch("vrautomatte.pipeline.rvm.download_model")
+    @patch("AlphaPass.pipeline.rvm.download_model")
     @patch("torch.jit.load")
     def test_resnet50(self, mock_load, mock_dl):
         """Factory returns RVMProcessor for resnet50."""
@@ -118,13 +118,13 @@ class TestDiskSpaceChecks(unittest.TestCase):
 
     def test_estimate_returns_positive(self):
         """Estimate is positive for any valid input."""
-        from vrautomatte.pipeline.runner import Pipeline
+        from AlphaPass.pipeline.runner import Pipeline
         est = Pipeline._estimate_disk_bytes(1920, 1080, 100)
         self.assertGreater(est, 0)
 
     def test_estimate_deovr_larger(self):
         """DeoVR estimate is larger than matte-only."""
-        from vrautomatte.pipeline.runner import Pipeline
+        from AlphaPass.pipeline.runner import Pipeline
         base = Pipeline._estimate_disk_bytes(
             1920, 1080, 100, is_deovr=False
         )
@@ -135,7 +135,7 @@ class TestDiskSpaceChecks(unittest.TestCase):
 
     def test_estimate_scales_with_frames(self):
         """More frames = more space needed."""
-        from vrautomatte.pipeline.runner import Pipeline
+        from AlphaPass.pipeline.runner import Pipeline
         small = Pipeline._estimate_disk_bytes(
             1920, 1080, 100
         )
@@ -148,7 +148,7 @@ class TestDiskSpaceChecks(unittest.TestCase):
         """No error when plenty of space available."""
         import tempfile
         from pathlib import Path
-        from vrautomatte.pipeline.runner import Pipeline
+        from AlphaPass.pipeline.runner import Pipeline
         # Temp dir should have plenty of space
         with tempfile.TemporaryDirectory() as tmp:
             Pipeline._check_disk_space(
@@ -159,7 +159,7 @@ class TestDiskSpaceChecks(unittest.TestCase):
         """Error when requesting more than exists."""
         import tempfile
         from pathlib import Path
-        from vrautomatte.pipeline.runner import Pipeline
+        from AlphaPass.pipeline.runner import Pipeline
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(RuntimeError) as ctx:
                 Pipeline._check_disk_space(
@@ -171,7 +171,7 @@ class TestDiskSpaceChecks(unittest.TestCase):
         """No error when drive isn't full."""
         import tempfile
         from pathlib import Path
-        from vrautomatte.pipeline.runner import Pipeline
+        from AlphaPass.pipeline.runner import Pipeline
         with tempfile.TemporaryDirectory() as tmp:
             Pipeline._check_disk_free(
                 Path(tmp)

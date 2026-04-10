@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from vrautomatte.utils.sbs import (
+from AlphaPass.utils.sbs import (
     detect_sbs,
     merge_frames,
     merge_mattes,

@@ -122,13 +122,13 @@ def deterministic_temp_name(
         c if c.isalnum() or c in "-_" else "_"
         for c in stem
     )[:50]
-    return f"vrautomatte_{safe_stem}_{config_hash[:8]}"
+    return f"AlphaPass_{safe_stem}_{config_hash[:8]}"
 
 
 def cleanup_stale_dirs(
     base_dir: Path, max_age_days: int = 7,
 ) -> None:
-    """Remove vrautomatte temp dirs older than max_age_days."""
+    """Remove AlphaPass temp dirs older than max_age_days."""
     if not base_dir.exists():
         return
     import shutil
@@ -137,7 +137,7 @@ def cleanup_stale_dirs(
     for d in base_dir.iterdir():
         if (
             d.is_dir()
-            and d.name.startswith("vrautomatte_")
+            and d.name.startswith("AlphaPass_")
             and d.stat().st_mtime < cutoff
         ):
             try:

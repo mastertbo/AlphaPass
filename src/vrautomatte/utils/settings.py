@@ -5,7 +5,7 @@ from pathlib import Path
 
 from loguru import logger
 
-_SETTINGS_DIR = Path.home() / ".config" / "vrautomatte"
+_SETTINGS_DIR = Path.home() / ".config" / "AlphaPass"
 _SETTINGS_FILE = _SETTINGS_DIR / "settings.json"
 
 _DEFAULTS = {

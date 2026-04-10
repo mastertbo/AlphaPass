@@ -23,16 +23,16 @@ import numpy as np
 from loguru import logger
 from PIL import Image
 
-from vrautomatte.pipeline.checkpoint import (
+from AlphaPass.pipeline.checkpoint import (
     PipelineCheckpoint,
     cleanup_stale_dirs,
     deterministic_temp_name,
     hash_config,
     hash_file_head,
 )
-from vrautomatte.pipeline.matte import AlphaSmoother, create_processor
-from vrautomatte.pipeline.scaler import FrameScaler
-from vrautomatte.utils.ffmpeg import (
+from AlphaPass.pipeline.matte import AlphaSmoother, create_processor
+from AlphaPass.pipeline.scaler import FrameScaler
+from AlphaPass.utils.ffmpeg import (
     apply_fisheye_mask,
     check_ffmpeg,
     convert_to_fisheye,
@@ -40,8 +40,8 @@ from vrautomatte.utils.ffmpeg import (
     matte_to_red_channel,
     pack_alpha,
 )
-from vrautomatte.utils.gpu import auto_configure_gpu
-from vrautomatte.utils.sbs import (
+from AlphaPass.utils.gpu import auto_configure_gpu
+from AlphaPass.utils.sbs import (
     detect_sbs,
     merge_frames,
     merge_mattes,
@@ -188,7 +188,7 @@ class Pipeline:
             except OSError:
                 pass
 
-        from vrautomatte.utils.ffmpeg import _hwaccel_args
+        from AlphaPass.utils.ffmpeg import _hwaccel_args
         cmd = [
             "ffmpeg", "-y",
             *_hwaccel_args(),
@@ -361,7 +361,7 @@ class Pipeline:
             return tmp, True
 
         tmp = Path(tempfile.mkdtemp(
-            prefix="vrautomatte_", dir=str(tmp_base)
+            prefix="AlphaPass_", dir=str(tmp_base)
         ))
         return tmp, False
 
@@ -415,7 +415,7 @@ class Pipeline:
         )
 
         # Write log to temp directory
-        log_path = tmp / "vrautomatte.log"
+        log_path = tmp / "AlphaPass.log"
         log_id = logger.add(
             str(log_path), level="DEBUG",
             format=(
@@ -567,7 +567,7 @@ class Pipeline:
                 ss_sec = start_0 / fps
                 dur_sec = num_to_process / fps
 
-                from vrautomatte.utils.ffmpeg import (
+                from AlphaPass.utils.ffmpeg import (
                     _hwaccel_args,
                     _run_ffmpeg_logged,
                 )
@@ -625,7 +625,7 @@ class Pipeline:
                     or config.end_frame > 0
                 )
                 if needs_trim:
-                    from vrautomatte.utils.ffmpeg import (
+                    from AlphaPass.utils.ffmpeg import (
                         _hwaccel_args,
                         _run_ffmpeg_logged,
                     )
@@ -1050,7 +1050,7 @@ class Pipeline:
         segment_path = (
             segments_dir / f"segment_{seg_idx:06d}.mp4"
         )
-        from vrautomatte.utils.ffmpeg import _encode_args_cpu
+        from AlphaPass.utils.ffmpeg import _encode_args_cpu
         base = [
             "ffmpeg", "-y",
             "-framerate", fps_str,

@@ -5,7 +5,7 @@ import sys
 
 from PySide6.QtCore import QThread, Signal
 
-from vrautomatte.pipeline.runner import (
+from AlphaPass.pipeline.runner import (
     Pipeline,
     PipelineConfig,
     PipelineProgress,

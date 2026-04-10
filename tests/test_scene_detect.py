@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from vrautomatte.pipeline.scene_detect import (
+from AlphaPass.pipeline.scene_detect import (
     SceneChangeDetector,
 )
 

@@ -1,4 +1,4 @@
-"""Headless AV1 re-encoder queue for VRAutoMatte.
+"""Headless AV1 re-encoder queue for AlphaPass.
 
 Encodes video files in-place to AV1 using av1_nvenc (NVIDIA GPU).
 Encodes to a temp file first, then atomically replaces the original on success.
@@ -6,18 +6,18 @@ Skips files already encoded in AV1.
 
 Commands
 --------
-vrautomatte-encode build --dir D:\\Videos
+AlphaPass-encode build --dir D:\\Videos
     Scans a directory recursively for .mp4 files (originals + _xalpha).
     Checks each file's codec via ffprobe — skips files already in AV1.
-    Writes an encode queue to ~/.config/vrautomatte/encode_queue.json.
+    Writes an encode queue to ~/.config/AlphaPass/encode_queue.json.
     Edit the file to reorder or remove entries before running.
 
-vrautomatte-encode run [--now] [--crf N]
+AlphaPass-encode run [--now] [--crf N]
     Processes the encode queue one file at a time.
     Only runs between 02:00–07:00 unless --now is passed.
     Encodes to a sibling .tmp file, then replaces the original on success.
 
-vrautomatte-encode status
+AlphaPass-encode status
     Shows pending / done / error counts and lists remaining files.
 """
 
@@ -35,7 +35,7 @@ from pathlib import Path
 # Defaults
 # ---------------------------------------------------------------------------
 
-DEFAULT_QUEUE = Path.home() / ".config" / "vrautomatte" / "encode_queue.json"
+DEFAULT_QUEUE = Path.home() / ".config" / "AlphaPass" / "encode_queue.json"
 DEFAULT_CRF = 35
 RUN_START_HOUR = 2   # 02:00
 RUN_END_HOUR = 12    # 12:00 (exclusive)
@@ -265,7 +265,7 @@ def cmd_run(args: argparse.Namespace) -> None:
 
     if not queue_path.exists():
         print(f"No queue file found at: {queue_path}", file=sys.stderr)
-        print("Run:  vrautomatte-encode build --dir <folder>  first.", file=sys.stderr)
+        print("Run:  AlphaPass-encode build --dir <folder>  first.", file=sys.stderr)
         sys.exit(1)
 
     if not _ffmpeg_available():
@@ -406,8 +406,8 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="vrautomatte-encode",
-        description="Headless AV1 re-encoder queue for VRAutoMatte (av1_nvenc).",
+        prog="AlphaPass-encode",
+        description="Headless AV1 re-encoder queue for AlphaPass (av1_nvenc).",
     )
     parser.add_argument(
         "--queue",

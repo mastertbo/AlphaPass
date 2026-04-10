@@ -1,10 +1,10 @@
-# Contributing to VRAutoMatte
+# Contributing to AlphaPass
 
 ## Development Setup
 
 ```bash
-git clone https://github.com/SifuInTheShell/VRAutoMatte.git
-cd VRAutoMatte
+git clone https://github.com/SifuInTheShell/AlphaPass.git
+cd AlphaPass
 uv sync --extra matanyone2   # or just `uv sync` for RVM-only
 ```
 
@@ -40,7 +40,7 @@ style: adjust light theme contrast
 
 ## Adding a New Matting Model
 
-1. Create `src/vrautomatte/pipeline/your_model.py`
+1. Create `src/AlphaPass/pipeline/your_model.py`
 2. Implement the `MatteProcessor` protocol (see `matte.py`)
 3. Add the variant to `create_processor()` factory in `matte.py`
 4. Add the model name to the UI combo box in `main_window.py`

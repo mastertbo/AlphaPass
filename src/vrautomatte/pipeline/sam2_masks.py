@@ -14,7 +14,7 @@ import numpy as np
 import torch
 from loguru import logger
 
-from vrautomatte.utils.gpu import get_device
+from AlphaPass.utils.gpu import get_device
 
 # SAM2 model variants by device capability
 _SAM2_VARIANTS = {
