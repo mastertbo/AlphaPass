@@ -16,6 +16,8 @@ dependencies = [
 
 [project.scripts]
 vrautomatte = "vrautomatte.main:main"
+vrautomatte-queue = "vrautomatte.cli.queue_runner:main"
+vrautomatte-encode = "vrautomatte.cli.encode_runner:main"
 
 [project.optional-dependencies]
 matanyone2 = [

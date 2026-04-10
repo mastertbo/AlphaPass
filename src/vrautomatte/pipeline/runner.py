@@ -1050,7 +1050,7 @@ class Pipeline:
         segment_path = (
             segments_dir / f"segment_{seg_idx:06d}.mp4"
         )
-        from vrautomatte.utils.ffmpeg import _encode_args
+        from vrautomatte.utils.ffmpeg import _encode_args_cpu
         base = [
             "ffmpeg", "-y",
             "-framerate", fps_str,
@@ -1063,23 +1063,13 @@ class Pipeline:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        try:
-            subprocess.run(
-                base + _encode_args("libx264", crf) + tail,
-                **devnull,
-            )
-        except subprocess.CalledProcessError:
-            # NVENC may fail when the GPU is busy with the
-            # matting model — fall back to CPU encoding.
-            logger.warning(
-                "NVENC failed for segment encode, "
-                "falling back to CPU libx264"
-            )
-            subprocess.run(
-                base + ["-c:v", "libx264", "-crf", str(crf)]
-                + tail,
-                **devnull,
-            )
+        # Always use CPU for segment encoding — the GPU is occupied
+        # by the matting model during this phase and NVENC would
+        # fail or stall under that load.
+        subprocess.run(
+            base + _encode_args_cpu("libx264", crf) + tail,
+            **devnull,
+        )
 
         for png in mattes_dir.glob("frame_*.png"):
             try:

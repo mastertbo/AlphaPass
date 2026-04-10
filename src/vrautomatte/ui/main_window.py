@@ -274,7 +274,7 @@ class MainWindow(QMainWindow):
         format_label = QLabel("Output Format:")
         format_label.setToolTip(
             "What the pipeline produces.\n\n"
-            "• Matte Only — Grayscale alpha matte video. "
+            "• XAlpha — Grayscale alpha matte video. "
             "White = person, black = background. "
             "Use for compositing in video editors.\n"
             "• DeoVR Alpha Pack — Full passthrough pipeline "
@@ -286,7 +286,7 @@ class MainWindow(QMainWindow):
         self.format_combo = QComboBox()
         self.format_combo.setToolTip(format_label.toolTip())
         self.format_combo.addItems([
-            "Matte Only", "DeoVR Alpha Pack"
+            "XAlpha", "DeoVR Alpha Pack"
         ])
         self.format_combo.currentIndexChanged.connect(
             self._on_format_changed
@@ -849,7 +849,7 @@ class MainWindow(QMainWindow):
             )
         else:
             output_path = str(
-                p.parent / f"{p.stem}_matte{p.suffix}"
+                p.parent / f"{p.stem}_xalpha{p.suffix}"
             )
 
         entry = {
@@ -969,7 +969,7 @@ class MainWindow(QMainWindow):
             output = self._deovr_output_name(input_path, fov)
         else:
             output = str(
-                p.parent / f"{p.stem}_matte{p.suffix}"
+                p.parent / f"{p.stem}_xalpha{p.suffix}"
             )
         self.output_edit.setText(output)
 
