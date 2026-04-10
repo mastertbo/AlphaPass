@@ -207,7 +207,8 @@ Input Video (fisheye SBS)
 | `_RF52` | Canon RF 5.2mm | 190° |
 
 **DeoVR settings:**
-- **Codec**: AV1 (default, Quest 3/3S native), HEVC, or H.264
+- **Final output codec**: always AV1 (`libsvtav1` / `av1_nvenc`) — Meta Quest 3/3S decodes AV1 natively
+- **Intermediate codec** (Codec setting): HEVC or H.264 — used for the fisheye conversion steps; does not affect the final alpha-packed file
 - **CRF**: 10–30 (default 18; lower = better quality, larger file)
 - **Fisheye mask**: `mask8k.png` downloaded automatically on first use
 
@@ -215,11 +216,93 @@ Input Video (fisheye SBS)
 
 All settings are saved automatically to `~/.config/AlphaPass/settings.json` (Linux/macOS) or `%APPDATA%/AlphaPass/settings.json` (Windows) and restored on next launch.
 
+**Chunk size** (100 / 250 / 500 / 1000 frames) controls the peak disk footprint during processing: smaller chunks use less peak disk space and save checkpoints more frequently, but add a little per-chunk overhead. 500 is a good default for most systems.
+
+**Auto-resume**: when enabled, each run uses a deterministic temp directory so that if the job is interrupted (crash, cancel, power loss), restarting with the same input and settings automatically picks up from the last completed segment. Uncheck to always start fresh.
+
+## CLI Tools
+
+In addition to the GUI, AlphaPass ships two headless command-line tools designed for scheduled overnight processing — useful when you have a large library of VR videos to process unattended.
+
+### AlphaPass-queue — overnight batch matting
+
+Scan a directory and build a queue of videos to matte, then process them on a schedule.
+
+```bash
+# 1. Scan a directory and write queue.json
+AlphaPass-queue build --dir /path/to/videos
+
+# 2. Process the queue (runs only during 02:00–12:00 by default)
+AlphaPass-queue run
+
+# 3. Check status
+AlphaPass-queue status
+
+# Process immediately, bypassing the time window
+AlphaPass-queue run --now
+
+# Rebuild the queue from scratch (discards existing entries)
+AlphaPass-queue build --dir /path/to/videos --reset
+
+# Use a custom queue file location
+AlphaPass-queue build --dir /videos --queue /data/my-queue.json
+AlphaPass-queue run --queue /data/my-queue.json
+```
+
+**How it works:**
+- `build` recursively scans for `.mp4 .mkv .mov .avi .webm` files and writes a `queue.json` with one entry per video (status: `pending`)
+- `run` processes each pending file using the current settings from `~/.config/AlphaPass/settings.json` — configure the GUI first, then run the queue
+- Output files are written as `{stem}_xalpha{ext}` alongside the input
+- Each file's status is updated atomically after completion (`done` or `error`) so a partial run can be safely resumed
+
+**Default queue location:** `~/.config/AlphaPass/queue.json`
+
+### AlphaPass-encode — AV1 re-encode queue
+
+Scan a directory and re-encode videos to AV1. Useful for re-encoding a library of matte files or any other videos.
+
+```bash
+# 1. Scan a directory and write encode_queue.json
+AlphaPass-encode build --dir /path/to/mattes
+
+# 2. Process the queue (same 02:00–12:00 window)
+AlphaPass-encode run
+
+# 3. Check status
+AlphaPass-encode status
+
+# Build with a specific quality level (default CRF is 35)
+AlphaPass-encode build --dir /path/to/mattes --crf 28
+
+# Override CRF at run time
+AlphaPass-encode run --crf 28 --now
+```
+
+**How it works:**
+- `build` recursively scans for video files and writes an `encode_queue.json`
+- `run` re-encodes each file using `av1_nvenc` (NVIDIA GPU required — AV1 software encoding is too slow for large libraries)
+- Encoded files replace the originals in-place
+
+**Default queue location:** `~/.config/AlphaPass/encode_queue.json`
+
+### Scheduling (crontab / Task Scheduler)
+
+Both tools are designed to be called from a nightly job. They self-limit to the 02:00–12:00 window and exit immediately if called outside it (use `--now` to bypass).
+
+```bash
+# crontab example: run at 02:00 every night
+0 2 * * * /path/to/venv/bin/AlphaPass-queue run
+0 3 * * * /path/to/venv/bin/AlphaPass-encode run
+```
+
 ## Architecture
 
 ```
-src/AlphaPass/
+src/vrautomatte/
 ├── main.py                    # Entry point
+├── cli/
+│   ├── queue_runner.py        # AlphaPass-queue: overnight batch matting
+│   └── encode_runner.py       # AlphaPass-encode: AV1 re-encode queue
 ├── pipeline/
 │   ├── matte.py               # MatteProcessor protocol, factory, AlphaSmoother
 │   ├── rvm.py                 # RVM processor (MobileNetV3 / ResNet50)
@@ -272,6 +355,21 @@ GPU Auto-Config (gpu.py)
 └── VRAM tier → max_matting_pixels, mem_frames, downsample_ratio
 ```
 
+### Temp Directory Layout
+
+Each run uses a deterministic temp directory named after the input file and current settings:
+
+```
+{temp_dir}/AlphaPass_{stem}_{config_hash[:8]}/
+├── frames/           # extracted source PNGs  (deleted immediately after matting)
+├── mattes/           # generated alpha PNGs   (deleted after segment flush)
+├── segments/         # intermediate segment videos (accumulated until concat)
+├── AlphaPass.log     # detailed per-run processing log
+└── checkpoint.json   # resume state (segments completed, input + config hashes)
+```
+
+Temp dirs older than 7 days are cleaned automatically when the pipeline starts. To find a log after a crash, look for `AlphaPass_*` directories in your system temp folder (`%TEMP%` on Windows, `/tmp` on Linux/macOS).
+
 ## Development
 
 ```bash
@@ -282,7 +380,7 @@ uv run python -m unittest discover -s tests -p "test_*.py"
 uv run python -m unittest tests/test_sbs.py
 
 # Check syntax
-uv run python -c "import ast; ast.parse(open('src/AlphaPass/ui/main_window.py').read()); print('OK')"
+uv run python -c "import ast; ast.parse(open('src/vrautomatte/ui/main_window.py').read()); print('OK')"
 ```
 
 ### Test Coverage

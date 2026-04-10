@@ -40,7 +40,7 @@ style: adjust light theme contrast
 
 ## Adding a New Matting Model
 
-1. Create `src/AlphaPass/pipeline/your_model.py`
+1. Create `src/vrautomatte/pipeline/your_model.py`
 2. Implement the `MatteProcessor` protocol (see `matte.py`)
 3. Add the variant to `create_processor()` factory in `matte.py`
 4. Add the model name to the UI combo box in `main_window.py`
@@ -48,4 +48,4 @@ style: adjust light theme contrast
 
 ## Project Structure
 
-See the [Architecture section](README.md#architecture) in the README.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for design decisions and rationale, or the [Architecture section](README.md#architecture) in the README for the module tree.
