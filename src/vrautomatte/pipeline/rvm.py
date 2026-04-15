@@ -28,7 +28,7 @@ import numpy as np
 import torch
 from loguru import logger
 
-from AlphaPass.utils.gpu import configure_cuda_performance, get_device
+from vrautomatte.utils.gpu import configure_cuda_performance, get_device
 
 # Official RVM release URLs — both FP32 and FP16 TorchScript variants.
 _BASE = (
@@ -178,10 +178,12 @@ class RVMProcessor:
             torch.from_numpy(frame)
             .permute(2, 0, 1)          # HWC → CHW
             .unsqueeze(0)              # add batch dim → [1, C, H, W]
-            .to(dtype=torch.float16 if self._use_fp16 else torch.float32,
-                device=self.device)
+            .to(dtype=torch.float16 if self._use_fp16 else torch.float32)
             .div(255.0)
         )
+        if self.device.type == "cuda":
+            src = src.pin_memory()
+        src = src.to(device=self.device, non_blocking=True)
 
         with torch.no_grad():
             fgr, pha, *self.rec = self.model(

@@ -10,9 +10,11 @@ Steps:
 import gc
 import math
 import os
+import queue
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 from dataclasses import dataclass
 from enum import Enum
@@ -23,16 +25,16 @@ import numpy as np
 from loguru import logger
 from PIL import Image
 
-from AlphaPass.pipeline.checkpoint import (
+from vrautomatte.pipeline.checkpoint import (
     PipelineCheckpoint,
     cleanup_stale_dirs,
     deterministic_temp_name,
     hash_config,
     hash_file_head,
 )
-from AlphaPass.pipeline.matte import AlphaSmoother, create_processor
-from AlphaPass.pipeline.scaler import FrameScaler
-from AlphaPass.utils.ffmpeg import (
+from vrautomatte.pipeline.matte import AlphaSmoother, create_processor
+from vrautomatte.pipeline.scaler import FrameScaler
+from vrautomatte.utils.ffmpeg import (
     apply_fisheye_mask,
     check_ffmpeg,
     convert_to_fisheye,
@@ -40,8 +42,8 @@ from AlphaPass.utils.ffmpeg import (
     matte_to_red_channel,
     pack_alpha,
 )
-from AlphaPass.utils.gpu import auto_configure_gpu
-from AlphaPass.utils.sbs import (
+from vrautomatte.utils.gpu import auto_configure_gpu
+from vrautomatte.utils.sbs import (
     detect_sbs,
     merge_frames,
     merge_mattes,
@@ -174,6 +176,7 @@ class Pipeline:
     def _extract_chunk(
         self, input_path: Path, frames_dir: Path,
         timestamp: float, num_frames: int,
+        emit_progress: bool = True,
     ) -> list[Path]:
         """Extract frames using fast keyframe seek.
 
@@ -181,6 +184,10 @@ class Pipeline:
         ~1-2 frame imprecision at chunk boundaries is acceptable
         for VR content.  Polls the output directory so the UI
         stays responsive and shows extraction progress.
+
+        When called from a background prefetch thread pass
+        ``emit_progress=False`` so the main matte-loop progress
+        is not interleaved with extraction updates.
         """
         for f in frames_dir.glob("frame_*.png"):
             try:
@@ -188,7 +195,7 @@ class Pipeline:
             except OSError:
                 pass
 
-        from AlphaPass.utils.ffmpeg import _hwaccel_args
+        from vrautomatte.utils.ffmpeg import _hwaccel_args
         cmd = [
             "ffmpeg", "-y",
             *_hwaccel_args(),
@@ -221,25 +228,26 @@ class Pipeline:
                 continue
             if count != last_count:
                 last_count = count
-                elapsed = (
-                    time.monotonic() - extract_start
-                )
-                fps = (
-                    count / elapsed if elapsed > 0 else 0
-                )
-                remaining = num_frames - count
-                eta = (
-                    remaining / fps if fps > 0 else 0
-                )
-                self._emit(PipelineProgress(
-                    stage="Extracting frames",
-                    stage_num=1,
-                    total_stages=self._total_stages(),
-                    frame_num=count,
-                    total_frames=num_frames,
-                    fps=fps,
-                    eta_sec=eta,
-                ))
+                if emit_progress:
+                    elapsed = (
+                        time.monotonic() - extract_start
+                    )
+                    fps = (
+                        count / elapsed if elapsed > 0 else 0
+                    )
+                    remaining = num_frames - count
+                    eta = (
+                        remaining / fps if fps > 0 else 0
+                    )
+                    self._emit(PipelineProgress(
+                        stage="Extracting frames",
+                        stage_num=1,
+                        total_stages=self._total_stages(),
+                        frame_num=count,
+                        total_frames=num_frames,
+                        fps=fps,
+                        eta_sec=eta,
+                    ))
 
         if process.returncode != 0:
             raise RuntimeError(
@@ -408,6 +416,24 @@ class Pipeline:
                 e, info["num_frames"]
             ) - s + 1
 
+        # Auto-enable torch.compile for large CUDA matanyone2 jobs.
+        # ~30 s warmup amortises well past ~1000 frames.
+        if (
+            not config.ma2_compile_model
+            and config.model_variant == "matanyone2"
+            and num_to_process > 1000
+        ):
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    config.ma2_compile_model = True
+                    logger.info(
+                        "torch.compile enabled automatically "
+                        f"({num_to_process} frames, CUDA)"
+                    )
+            except ImportError:
+                pass
+
         # Setup temp directory (deterministic for resume)
         cfg_hash = hash_config(config)
         tmp, is_deterministic = self._setup_temp_dir(
@@ -567,7 +593,7 @@ class Pipeline:
                 ss_sec = start_0 / fps
                 dur_sec = num_to_process / fps
 
-                from AlphaPass.utils.ffmpeg import (
+                from vrautomatte.utils.ffmpeg import (
                     _hwaccel_args,
                     _run_ffmpeg_logged,
                 )
@@ -625,7 +651,7 @@ class Pipeline:
                     or config.end_frame > 0
                 )
                 if needs_trim:
-                    from AlphaPass.utils.ffmpeg import (
+                    from vrautomatte.utils.ffmpeg import (
                         _hwaccel_args,
                         _run_ffmpeg_logged,
                     )
@@ -760,6 +786,59 @@ class Pipeline:
         seg_idx = resume_seg
         global_frame_idx = resume_frames
 
+        # ── Double-buffered extraction ────────────────────────
+        # Chunk N+1 is extracted in the background while chunk N
+        # is being matted. Two alternating dirs so the prefetch
+        # thread writes while the matte loop reads the other one.
+        tmp_root = frames_dir.parent
+        frames_dirs = [
+            tmp_root / "frames_a",
+            tmp_root / "frames_b",
+        ]
+        for d in frames_dirs:
+            d.mkdir(exist_ok=True)
+
+        prefetch_thread = None
+        prefetch_result: dict = {}
+
+        def _start_prefetch(next_idx: int) -> None:
+            """Kick off background extraction of the next chunk."""
+            nonlocal prefetch_thread, prefetch_result
+            if next_idx >= num_chunks:
+                prefetch_thread = None
+                prefetch_result = {}
+                return
+            next_offset = next_idx * config.chunk_size
+            next_start = start_frame_0based + next_offset
+            next_frames = min(
+                config.chunk_size,
+                num_to_process - next_offset,
+            )
+            next_ts = (
+                next_start / fps if fps > 0 else 0
+            )
+            next_dir = frames_dirs[next_idx % 2]
+            holder: dict = {}
+
+            def _run() -> None:
+                try:
+                    holder["files"] = self._extract_chunk(
+                        input_path, next_dir,
+                        next_ts, next_frames,
+                        emit_progress=False,
+                    )
+                except BaseException as exc:
+                    holder["error"] = exc
+
+            t = threading.Thread(
+                target=_run, daemon=True,
+            )
+            t.start()
+            prefetch_thread = t
+            prefetch_result = holder
+
+        is_first_active = True
+
         try:
             for chunk_idx in range(num_chunks):
                 chunk_offset = chunk_idx * config.chunk_size
@@ -798,10 +877,28 @@ class Pipeline:
                     total_frames=num_to_process,
                 ))
 
-                frame_files = self._extract_chunk(
-                    input_path, frames_dir,
-                    ts, chunk_frames,
-                )
+                if is_first_active:
+                    # First active chunk: extract synchronously
+                    active_dir = frames_dirs[chunk_idx % 2]
+                    frame_files = self._extract_chunk(
+                        input_path, active_dir,
+                        ts, chunk_frames,
+                    )
+                    is_first_active = False
+                else:
+                    # Await background prefetch kicked off
+                    # during the previous iteration
+                    prefetch_thread.join()
+                    if "error" in prefetch_result:
+                        raise prefetch_result["error"]
+                    frame_files = prefetch_result.get(
+                        "files", []
+                    )
+                    prefetch_thread = None
+                    prefetch_result = {}
+
+                # Kick off prefetch for the next active chunk
+                _start_prefetch(chunk_idx + 1)
 
                 if not frame_files:
                     logger.warning(
@@ -839,69 +936,27 @@ class Pipeline:
                     )
 
                 # ── Process this chunk's frames ──
-                seg_frame = 0
-                for i, frame_file in enumerate(frame_files):
-                    if self._cancelled:
-                        raise InterruptedError(
-                            "Pipeline cancelled by user"
-                        )
-
-                    if i % _DISK_CHECK_INTERVAL == 0:
-                        self._check_disk_free(mattes_dir)
-
-                    frame_arr = np.array(
-                        Image.open(
-                            frame_file
-                        ).convert("RGB")
-                    )
-
-                    if use_sbs:
-                        matte_arr = self._process_sbs_frame(
-                            frame_arr, proc_l, proc_r, scaler,
-                        )
-                    else:
-                        scaled = scaler.downscale(frame_arr)
-                        matte_arr = processor.process_frame(
-                            scaled
-                        )
-                        matte_arr = scaler.upscale_matte(
-                            matte_arr
-                        )
-                        del scaled
-
-                    seg_frame += 1
-                    Image.fromarray(
-                        matte_arr, mode="L"
-                    ).save(
-                        mattes_dir
-                        / f"frame_{seg_frame:06d}.png"
-                    )
-
-                    try:
-                        frame_file.unlink()
-                    except OSError:
-                        pass
-
-                    global_frame_idx += 1
-                    stage = (
-                        "Matting SBS (L+R)"
-                        if use_sbs
-                        else "Generating mattes"
-                    )
-                    self._emit_matte_progress(
-                        global_frame_idx - 1,
+                # Reader loads PNG → numpy on a background thread,
+                # writer saves matte PNG on another.  Main thread
+                # runs GPU inference. Overlaps disk I/O with GPU.
+                seg_frame, global_frame_idx = (
+                    self._run_matte_loop(
+                        frame_files,
+                        mattes_dir,
+                        processor, proc_l, proc_r,
+                        scaler, use_sbs,
+                        global_frame_idx,
                         num_to_process,
-                        frame_arr, matte_arr,
-                        stage=stage,
-                        estimated_disk_gb=estimated_disk_gb,
+                        estimated_disk_gb,
                     )
-                    del frame_arr, matte_arr
+                )
 
                 # Flush segment
                 if seg_frame > 0:
                     self._flush_matte_segment(
                         mattes_dir, segments_dir, seg_idx,
                         fps_str=fps_str, crf=config.crf,
+                        seg_frame=seg_frame,
                     )
                     seg_idx += 1
 
@@ -933,6 +988,16 @@ class Pipeline:
                 gc.collect()
 
         finally:
+            # Join any in-flight prefetch so ffmpeg doesn't orphan.
+            # If pipeline was cancelled, _extract_chunk already
+            # terminated ffmpeg on _cancelled=True; otherwise
+            # the thread finishes normally.
+            if (
+                prefetch_thread is not None
+                and prefetch_thread.is_alive()
+            ):
+                prefetch_thread.join(timeout=10)
+
             if use_sbs:
                 if proc_l is not None:
                     proc_l.cleanup()
@@ -990,6 +1055,163 @@ class Pipeline:
         del left, right, left_m, right_m
         return matte
 
+    # ── Matte loop (threaded I/O) ────────────────────────────
+
+    def _run_matte_loop(
+        self,
+        frame_files,
+        mattes_dir,
+        processor, proc_l, proc_r,
+        scaler, use_sbs,
+        global_frame_idx,
+        num_to_process,
+        estimated_disk_gb,
+    ):
+        """Run the inner matte loop with threaded disk I/O.
+
+        Reader thread loads source PNG → numpy, writer thread
+        saves matte PNG; main thread runs GPU inference and emits
+        progress.  Overlaps disk I/O with GPU compute.
+
+        Returns:
+            (seg_frame, global_frame_idx) — updated counters.
+        """
+        read_queue: queue.Queue = queue.Queue(maxsize=3)
+        write_queue: queue.Queue = queue.Queue(maxsize=3)
+        reader_error: list = []
+
+        def _reader():
+            try:
+                for f in frame_files:
+                    if self._cancelled:
+                        break
+                    arr = np.array(
+                        Image.open(f).convert("RGB")
+                    )
+                    read_queue.put((f, arr))
+            except Exception as exc:
+                reader_error.append(exc)
+            finally:
+                read_queue.put(None)
+
+        def _writer():
+            while True:
+                item = write_queue.get()
+                if item is None:
+                    break
+                path, arr = item
+                try:
+                    Image.fromarray(
+                        arr, mode="L"
+                    ).save(path)
+                except Exception:
+                    logger.exception(
+                        f"Failed to save matte {path}"
+                    )
+
+        reader_thread = threading.Thread(
+            target=_reader, daemon=True,
+        )
+        writer_thread = threading.Thread(
+            target=_writer, daemon=True,
+        )
+        reader_thread.start()
+        writer_thread.start()
+
+        seg_frame = 0
+        i = -1
+        try:
+            while True:
+                item = read_queue.get()
+                if item is None:
+                    break
+                i += 1
+                frame_file, frame_arr = item
+
+                if self._cancelled:
+                    raise InterruptedError(
+                        "Pipeline cancelled by user"
+                    )
+
+                if i % _DISK_CHECK_INTERVAL == 0:
+                    self._check_disk_free(mattes_dir)
+
+                if use_sbs:
+                    matte_arr = self._process_sbs_frame(
+                        frame_arr, proc_l, proc_r, scaler,
+                    )
+                else:
+                    scaled = scaler.downscale(frame_arr)
+                    matte_arr = processor.process_frame(
+                        scaled
+                    )
+                    matte_arr = scaler.upscale_matte(
+                        matte_arr
+                    )
+                    del scaled
+
+                seg_frame += 1
+                matte_path = (
+                    mattes_dir
+                    / f"frame_{seg_frame:06d}.png"
+                )
+                write_queue.put((matte_path, matte_arr))
+
+                try:
+                    frame_file.unlink()
+                except OSError:
+                    pass
+
+                global_frame_idx += 1
+                stage = (
+                    "Matting SBS (L+R)"
+                    if use_sbs
+                    else "Generating mattes"
+                )
+                self._emit_matte_progress(
+                    global_frame_idx - 1,
+                    num_to_process,
+                    frame_arr, matte_arr,
+                    stage=stage,
+                    estimated_disk_gb=estimated_disk_gb,
+                )
+                del frame_arr, matte_arr
+
+            # Normal path: signal writer, wait for all PNGs
+            write_queue.put(None)
+            writer_thread.join()
+            reader_thread.join(timeout=5)
+
+            if reader_error:
+                raise reader_error[0]
+
+        except BaseException:
+            # Drain read_queue so reader is not blocked on put,
+            # then signal writer to stop. Join with timeout so a
+            # stuck thread can't hang the pipeline.
+            try:
+                while True:
+                    read_queue.get_nowait()
+            except queue.Empty:
+                pass
+            try:
+                write_queue.put_nowait(None)
+            except queue.Full:
+                try:
+                    while True:
+                        write_queue.get_nowait()
+                except queue.Empty:
+                    pass
+                try:
+                    write_queue.put_nowait(None)
+                except queue.Full:
+                    pass
+            reader_thread.join(timeout=5)
+            writer_thread.join(timeout=5)
+            raise
+
+        return seg_frame, global_frame_idx
+
     # ── Processor creation ───────────────────────────────────
 
     def _make_processor(self, config, first_frame):
@@ -1041,34 +1263,30 @@ class Pipeline:
 
     def _flush_matte_segment(
         self, mattes_dir, segments_dir, seg_idx,
-        fps_str, crf,
+        fps_str, crf, seg_frame=0,
     ):
         """Encode PNGs into a segment video, then delete them.
 
         Uses libx264 with yuv420p for broad concat compatibility.
+        Prefers h264_nvenc when available; falls back to CPU libx264.
         """
         segment_path = (
             segments_dir / f"segment_{seg_idx:06d}.mp4"
         )
-        from AlphaPass.utils.ffmpeg import _encode_args_cpu
+        from vrautomatte.utils.ffmpeg import (
+            _encode_args,
+            _run_ffmpeg_logged,
+        )
         base = [
             "ffmpeg", "-y",
             "-framerate", fps_str,
             "-i", str(mattes_dir / "frame_%06d.png"),
         ]
         tail = ["-pix_fmt", "yuv420p", str(segment_path)]
-        devnull = dict(
-            check=True,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        # Always use CPU for segment encoding — the GPU is occupied
-        # by the matting model during this phase and NVENC would
-        # fail or stall under that load.
-        subprocess.run(
-            base + _encode_args_cpu("libx264", crf) + tail,
-            **devnull,
+        cmd = base + _encode_args("libx264", crf) + tail
+        _run_ffmpeg_logged(
+            cmd, f"flush-seg-{seg_idx}",
+            total_frames=seg_frame,
         )
 
         for png in mattes_dir.glob("frame_*.png"):

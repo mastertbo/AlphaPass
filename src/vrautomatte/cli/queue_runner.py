@@ -142,12 +142,12 @@ def _in_window() -> bool:
 
 
 def _build_pipeline_config(item: dict, settings: dict):
-    from AlphaPass.pipeline.runner import (
+    from vrautomatte.pipeline.runner import (
         OutputFormat,
         PipelineConfig,
         ProjectionType,
     )
-    from AlphaPass.utils.settings import load_settings
+    from vrautomatte.utils.settings import load_settings
 
     if settings is None:
         settings = load_settings()
@@ -189,8 +189,8 @@ def cmd_run(args: argparse.Namespace) -> None:
         )
         sys.exit(0)
 
-    from AlphaPass.pipeline.runner import Pipeline, PipelineProgress
-    from AlphaPass.utils.settings import load_settings
+    from vrautomatte.pipeline.runner import Pipeline, PipelineProgress
+    from vrautomatte.utils.settings import load_settings
 
     settings = load_settings()
     queue = _load_queue(queue_path)

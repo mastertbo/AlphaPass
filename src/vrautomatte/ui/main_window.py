@@ -31,24 +31,24 @@ from PySide6.QtWidgets import (
 )
 from loguru import logger
 
-from AlphaPass.pipeline.runner import (
+from vrautomatte.pipeline.runner import (
     OutputFormat,
     PipelineConfig,
     PipelineProgress,
     ProjectionType,
 )
-from AlphaPass.ui.preview import PreviewWidget
-from AlphaPass.ui.themes import (
+from vrautomatte.ui.preview import PreviewWidget
+from vrautomatte.ui.themes import (
     DARK_COLORS,
     DARK_STYLE,
     LIGHT_COLORS,
     LIGHT_STYLE,
 )
-from AlphaPass.ui.worker import InstallWorker, PipelineWorker
-from AlphaPass.utils.ffmpeg import check_ffmpeg, get_video_info
-from AlphaPass.utils.gpu import get_device_info
-from AlphaPass.utils.masks import ensure_mask, get_mask_path
-from AlphaPass.utils.settings import load_settings, save_settings
+from vrautomatte.ui.worker import InstallWorker, PipelineWorker
+from vrautomatte.utils.ffmpeg import check_ffmpeg, get_video_info
+from vrautomatte.utils.gpu import get_device_info
+from vrautomatte.utils.masks import ensure_mask, get_mask_path
+from vrautomatte.utils.settings import load_settings, save_settings
 
 
 
@@ -985,7 +985,7 @@ class MainWindow(QMainWindow):
                 f"{info['codec']}"
             )
             # Auto-detect SBS
-            from AlphaPass.utils.sbs import detect_sbs
+            from vrautomatte.utils.sbs import detect_sbs
             is_sbs = detect_sbs(
                 info["width"], info["height"]
             )
@@ -1052,7 +1052,7 @@ class MainWindow(QMainWindow):
 
         try:
             import tempfile
-            from AlphaPass.utils.ffmpeg import extract_frame
+            from vrautomatte.utils.ffmpeg import extract_frame
 
             with tempfile.NamedTemporaryFile(
                 suffix=".png", delete=False

@@ -76,7 +76,7 @@ This pulls in [MatAnyone 2](https://github.com/pq-yang/MatAnyone2) and [SAM2](ht
 
 ### Basic Workflow
 
-1. **Launch** the app: `uv run AlphaPass`
+1. **Launch** the app: ``uv run AlphaPass
 2. **Load a video** — click Browse or drag a file onto the window
 3. **Choose a model**:
    - `mobilenetv3` — fastest, detects all people (crowds, groups)
@@ -301,7 +301,7 @@ Both tools are designed to be called from a nightly job. They self-limit to the 
 src/vrautomatte/
 ├── main.py                    # Entry point
 ├── cli/
-│   ├── queue_runner.py        # AlphaPass-queue: overnight batch matting
+│   ├── queue_runner.py        # A3phaPass-queue: overnight batch matting
 │   └── encode_runner.py       # AlphaPass-encode: AV1 re-encode queue
 ├── pipeline/
 │   ├── matte.py               # MatteProcessor protocol, factory, AlphaSmoother
