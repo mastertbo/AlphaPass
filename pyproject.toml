@@ -15,9 +15,9 @@ dependencies = [
 ]
 
 [project.scripts]
-AlphaPass = "AlphaPass.main:main"
-AlphaPass-queue = "AlphaPass.cli.queue_runner:main"
-AlphaPass-encode = "AlphaPass.cli.encode_runner:main"
+AlphaPass = "vrautomatte.main:main"
+AlphaPass-queue = "vrautomatte.cli.queue_runner:main"
+AlphaPass-encode = "vrautomatte.cli.encode_runner:main"
 
 [project.optional-dependencies]
 matanyone2 = [
@@ -52,7 +52,7 @@ override-dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/AlphaPass"]
+packages = ["src/vrautomatte"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/AlphaPass"]
+include = ["src/vrautomatte"]

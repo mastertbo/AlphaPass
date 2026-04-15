@@ -17,11 +17,11 @@ def main():
     logger.info("Starting AlphaPass...")
 
     # Ensure correct PyTorch variant before importing torch-dependent modules
-    from AlphaPass.utils.bootstrap import ensure_correct_torch
+    from vrautomatte.utils.bootstrap import ensure_correct_torch
     ensure_correct_torch()
 
     from PySide6.QtWidgets import QApplication
-    from AlphaPass.ui.main_window import MainWindow
+    from vrautomatte.ui.main_window import MainWindow
 
     app = QApplication(sys.argv)
     app.setApplicationName("AlphaPass")

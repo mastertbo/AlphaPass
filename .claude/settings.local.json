@@ -10,7 +10,10 @@
       "Bash(curl -s \"https://raw.githubusercontent.com/ack00gar/FunGen-AI-Powered-Funscript-Generator/main/install.bat\")",
       "Bash(curl -s \"https://raw.githubusercontent.com/ack00gar/FunGen-AI-Powered-Funscript-Generator/refs/heads/main/install.bat\")",
       "Bash(ls /c/Users/Admin/projects/FunGen-AI-Powered-Funscript-Generator/*.bat /c/Users/Admin/projects/FunGen-AI-Powered-Funscript-Generator/*.sh)",
-      "Bash(uv sync:*)"
+      "Bash(uv sync:*)",
+      "Bash(python -c \"import sys; sys.path.insert\\(0, 'src'\\); from vrautomatte.pipeline import rvm, matanyone2; print\\('rvm OK'\\); print\\('matanyone2 OK'\\)\")"
     ]
-  }
+  },
+  "outputStyle": "default",
+  "prefersReducedMotion": true
 }

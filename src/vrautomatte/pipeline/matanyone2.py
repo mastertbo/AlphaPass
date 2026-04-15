@@ -31,10 +31,10 @@ import numpy as np
 import torch
 from loguru import logger
 
-from AlphaPass.utils.gpu import configure_cuda_performance, get_device
+from vrautomatte.utils.gpu import configure_cuda_performance, get_device
 
 # Re-export mask functions for backward compatibility
-from AlphaPass.pipeline.sam2_masks import (  # noqa: F401
+from vrautomatte.pipeline.sam2_masks import (  # noqa: F401
     generate_first_frame_mask,
     generate_pov_body_mask,
     _mask_center_of_mass,
@@ -110,7 +110,7 @@ class MatAnyone2Processor:
         self._use_fp16 = use_fp16 and device.type in ("cuda", "mps")
 
         if pov_mode:
-            from AlphaPass.pipeline.scene_detect import (
+            from vrautomatte.pipeline.scene_detect import (
                 SceneChangeDetector,
             )
             self._scene_detector = SceneChangeDetector()
@@ -190,7 +190,9 @@ class MatAnyone2Processor:
         )
         if self._use_fp16:
             t = t.half()
-        t = t.to(self.device)
+        if self.device.type == "cuda":
+            t = t.pin_memory()
+        t = t.to(self.device, non_blocking=True)
         if self.device.type == "cuda":
             # channels_last requires 4-D input
             t = (
@@ -285,7 +287,7 @@ class MatAnyone2Processor:
             and not self._is_first_frame
             and self._scene_detector.check(frame)
         ):
-            from AlphaPass.pipeline.sam2_masks import (
+            from vrautomatte.pipeline.sam2_masks import (
                 generate_first_frame_mask,
             )
             logger.info("Scene change — regenerating MA2 mask")
